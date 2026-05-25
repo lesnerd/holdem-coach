@@ -5,3 +5,7 @@ dist/
 .env
 .env.local
 .vite/
+
+# Local-only CA bundles for builds behind a TLS-intercepting proxy.
+certs/*
+!certs/.gitkeep
