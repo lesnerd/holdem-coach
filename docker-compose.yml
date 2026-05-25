@@ -15,7 +15,7 @@ services:
   # Usage: docker compose --profile dev up  ->  http://localhost:5173
   dev:
     profiles: ["dev"]
-    image: easycompany.jfrog.io/docker/node:20-alpine
+    image: node:20-alpine
     working_dir: /app
     command: sh -c "if [ -f package-lock.json ]; then npm ci; else npm install; fi && npm run dev -- --host 0.0.0.0"
     ports:
