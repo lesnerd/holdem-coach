@@ -1,5 +1,5 @@
 # ---------- Stage 1: build the static assets ----------
-FROM node:20-alpine AS builder
+FROM easycompany.jfrog.io/docker/node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 2: serve with nginx ----------
-FROM nginx:1.27-alpine AS runner
+FROM easycompany.jfrog.io/docker/nginx:1.27-alpine AS runner
 
 # Custom nginx config for an SPA (gzip + sensible caching + fallback to index.html).
 COPY nginx.conf /etc/nginx/conf.d/default.conf

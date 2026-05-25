@@ -9,3 +9,5 @@ dist/
 # Local-only CA bundles for builds behind a TLS-intercepting proxy.
 certs/*
 !certs/.gitkeep
+.fly/
+.cursor/rules/fly-decision-records.mdc
