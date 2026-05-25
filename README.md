@@ -62,34 +62,18 @@ The `certs/` directory is gitignored; the Dockerfile picks up any `*.crt` files
 inside it and adds them to the system trust store + npm CA file. No-op when the
 directory is empty.
 
-## Deploy to GitHub Pages
+## Continuous delivery
 
-### Option A: Automatic (recommended)
+Two workflows run on every push to `main`:
 
-1. Create a new repo on GitHub (e.g. `holdem-coach`)
-2. Push this folder to it:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/holdem-coach.git
-   git push -u origin main
-   ```
-3. On GitHub, go to **Settings → Pages**
-4. Under "Build and deployment", set **Source** to **GitHub Actions**
-5. The included workflow (`.github/workflows/deploy.yml`) will run on every push to `main` and deploy automatically
-6. After the first run completes (~1 min), your site will be live at:
-   `https://YOUR_USERNAME.github.io/holdem-coach/`
+- **`.github/workflows/deploy.yml`** — builds the Vite app and deploys to
+  GitHub Pages. Live at https://lesnerd.github.io/holdem-coach/
+- **`.github/workflows/fly-docker.yml`** — builds the Docker image and pushes
+  it to the JFrog Fly registry as
+  `easycompany.jfrog.io/docker/holdem-coach:{latest,<sha>}`.
 
-### Option B: Manual via gh-pages
-
-```bash
-npm install
-npm run deploy
-```
-
-Then enable Pages in repo settings and point it to the `gh-pages` branch.
+The Pages workflow requires the repo to be **public** (or on a paid plan) and
+Pages to be enabled with **Source: GitHub Actions** under Settings → Pages.
 
 ## Tech
 
