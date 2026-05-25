@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
@@ -25,9 +26,20 @@ jobs:
           node-version: 22
           cache: npm
 
+      # OIDC -> Fly access token, auto-configures npm to resolve through the Fly registry.
+      - uses: jfrog/fly-action@v1
+
       - run: npm ci
 
       - run: npm run build
+
+      # Track the Pages build as a Fly release so it shows up alongside Docker images.
+      - uses: jfrog/fly-action/upload@v1
+        with:
+          name: holdem-coach-pages
+          version: ${{ github.sha }}
+          files: |
+            dist/**
 
       - uses: actions/configure-pages@v6
 
