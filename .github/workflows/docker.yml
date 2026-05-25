@@ -11,11 +11,14 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
   group: docker-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -26,34 +29,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JFrog Fly
-        uses: jfrog/fly-action@v1
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Compute image tags & labels
         id: meta
-        run: |
-          REGISTRY="${{ env.FLY_REGISTRY_SUBDOMAIN }}/docker"
-          IMAGE_NAME="holdem-coach"
-          
-          # Build tags based on git ref
-          TAGS=""
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TAGS="${REGISTRY}/${IMAGE_NAME}:latest"
-            TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:${{ github.sha }}"
-          elif [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-            TAGS="${REGISTRY}/${IMAGE_NAME}:${TAG_NAME}"
-            TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:latest"
-          elif [[ "${{ github.ref }}" == "refs/heads/"* ]]; then
-            BRANCH_NAME="${{ github.ref_name }}"
-            TAGS="${REGISTRY}/${IMAGE_NAME}:${BRANCH_NAME}-${{ github.sha }}"
-          fi
-          
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-          echo "registry=${REGISTRY}" >> $GITHUB_OUTPUT
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build image (load to local docker for smoke test)
         id: build
@@ -64,6 +62,7 @@ jobs:
           load: true
           push: false
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
