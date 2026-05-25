@@ -1,0 +1,137 @@
+name: Build & Publish Docker Image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build, test, and (on main) publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags & labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build image (load to local docker for smoke test)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test image
+        run: |
+          set -euo pipefail
+          tag="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | head -n1)"
+          echo "Running smoke test against: $tag"
+          docker run -d --name smoke -p 8080:80 "$tag"
+
+          # Wait for nginx to be ready (up to ~30s).
+          ready=0
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /tmp/index.html -w '' http://localhost:8080/; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo "App did not become ready in time"
+            docker logs smoke || true
+            exit 1
+          fi
+
+          # Verify it actually served the SPA, not a default nginx page.
+          if ! grep -q "Hold'em Coach" /tmp/index.html; then
+            echo "index.html does not contain expected title"
+            head -c 500 /tmp/index.html
+            docker logs smoke || true
+            exit 1
+          fi
+
+          # Verify SPA fallback: unknown route should still return index.html.
+          code="$(curl -s -o /tmp/fallback.html -w '%{http_code}' http://localhost:8080/some/deep/route)"
+          if [ "$code" != "200" ] || ! diff -q /tmp/index.html /tmp/fallback.html >/dev/null; then
+            echo "SPA fallback failed (code=$code)"
+            exit 1
+          fi
+
+          echo "Smoke test passed"
+          docker rm -f smoke
+
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${{ steps.meta.outputs.tags }}" | while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            echo "Pushing $tag"
+            docker push "$tag"
+          done
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Docker build summary"
+            echo ""
+            echo "**Event:** \`${{ github.event_name }}\`"
+            echo "**Ref:** \`${{ github.ref }}\`"
+            echo ""
+            echo "### Tags"
+            echo '```'
+            printf '%s\n' "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo ""
+              echo "_PR build — image was built and smoke-tested but not pushed._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
