@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           # meta.outputs.tags is comma-separated; normalize to newlines and take the first.
-          tag="$(printf '%s' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | head -n1)"
+          tag="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | head -n1)"
           echo "Running smoke test against: $tag"
           docker run -d --name smoke -p 8080:80 "$tag"
 
@@ -109,7 +109,8 @@ jobs:
         run: |
           set -euo pipefail
           # meta.outputs.tags is comma-separated; iterate one tag per line.
-          printf '%s' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | while IFS= read -r tag; do
+          # Trailing \n in printf is required so `read` doesn't drop the last tag on EOF.
+          printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | while IFS= read -r tag; do
             [ -z "$tag" ] && continue
             echo "Pushing $tag"
             docker push "$tag"
@@ -128,7 +129,7 @@ jobs:
             echo ""
             echo "### Tags"
             echo '```'
-            printf '%s' "${{ steps.meta.outputs.tags }}" | tr ',' '\n'
+            printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n'
             echo '```'
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo ""
