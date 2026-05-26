@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from "react";
+import { useTheme } from "./useTheme.js";
+import ThemeToggle from "./ThemeToggle.jsx";
 
 const SUITS = ["♠","♥","♦","♣"];
 const RANKS = ["2","3","4","5","6","7","8","9","T","J","Q","K","A"];
@@ -275,8 +277,8 @@ const PHASE_LABELS = ["Pre-Flop","Flop","Turn","River","Showdown"];
 function Card({r,s,hidden,small,glow}){
   if(hidden){
     return (
-      <div style={{width:small?38:52,height:small?54:74,borderRadius:7,background:"linear-gradient(145deg,#1a3a5c,#0d2137)",border:"2px solid #2a5a8a",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.4)",flexShrink:0}}>
-        <div style={{width:small?22:32,height:small?32:48,borderRadius:4,border:"1.5px solid #2a5a8a",background:"repeating-conic-gradient(#1a3a5c 0% 25%, #0f2d4a 0% 50%) 50%/8px 8px"}}/>
+      <div style={{width:small?38:52,height:small?54:74,borderRadius:7,background:`linear-gradient(145deg,var(--card-back-start),var(--card-back-end))`,border:"2px solid var(--card-back-border)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.4)",flexShrink:0}}>
+        <div style={{width:small?22:32,height:small?32:48,borderRadius:4,border:"1.5px solid var(--card-back-border)",background:"repeating-conic-gradient(var(--card-back-start) 0% 25%, var(--card-back-pattern) 0% 50%) 50%/8px 8px"}}/>
       </div>
     );
   }
@@ -293,8 +295,8 @@ function EquityBar({win,label,color}){
   const w=parseFloat(win);
   return (
     <div style={{display:"flex",alignItems:"center",gap:6,width:"100%"}}>
-      <span style={{fontSize:10,color:"#667",width:28,textAlign:"right",flexShrink:0}}>{label}</span>
-      <div style={{flex:1,height:14,borderRadius:7,background:"rgba(255,255,255,0.06)",overflow:"hidden"}}>
+      <span style={{fontSize:10,color:"var(--text-faint)",width:28,textAlign:"right",flexShrink:0}}>{label}</span>
+      <div style={{flex:1,height:14,borderRadius:7,background:"var(--bar-track)",overflow:"hidden"}}>
         <div style={{height:"100%",width:`${w}%`,background:`linear-gradient(90deg,${color},${color}aa)`,borderRadius:7,transition:"width 0.8s cubic-bezier(0.22,1,0.36,1)",minWidth:w>0?2:0}}/>
       </div>
       <span style={{fontSize:12,fontWeight:700,color,width:42,textAlign:"right",fontFamily:"'Georgia',serif"}}>{win}%</span>
@@ -348,7 +350,7 @@ function HandMatrix({heroCards,onClose}){
     strong:     {bg:'#4ecdc4',text:'#04342C'},
     playable:   {bg:'#7eb8da',text:'#042C53'},
     speculative:{bg:'#c084fc',text:'#26215C'},
-    fold:       {bg:'#3a3a3a',text:'#888'},
+    fold:       {bg:'var(--matrix-fold-bg)',text:'var(--matrix-fold-text)'},
   };
 
   // Identify hero's current hand cell
@@ -376,12 +378,12 @@ function HandMatrix({heroCards,onClose}){
   gridItems.push(<div key="corner"></div>);
   // Top header row (column labels)
   for(let j=0;j<13;j++){
-    gridItems.push(<div key={`col-${j}`} style={{fontSize:10,color:'#888',display:'flex',alignItems:'center',justifyContent:'center'}}>{ranks[j]}</div>);
+    gridItems.push(<div key={`col-${j}`} style={{fontSize:10,color:'var(--matrix-header)',display:'flex',alignItems:'center',justifyContent:'center'}}>{ranks[j]}</div>);
   }
   // Body rows
   for(let i=0;i<13;i++){
     // Row header
-    gridItems.push(<div key={`row-${i}`} style={{fontSize:10,color:'#888',display:'flex',alignItems:'center',justifyContent:'center'}}>{ranks[i]}</div>);
+    gridItems.push(<div key={`row-${i}`} style={{fontSize:10,color:'var(--matrix-header)',display:'flex',alignItems:'center',justifyContent:'center'}}>{ranks[i]}</div>);
     // Row cells
     for(let j=0;j<13;j++){
       const cat=categoryAt(i,j);
@@ -396,8 +398,8 @@ function HandMatrix({heroCards,onClose}){
         <div key={`cell-${i}-${j}`} style={{
           aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center',
           background:c.bg,color:c.text,fontSize:9,fontWeight:700,borderRadius:3,
-          border:isHero?'2px solid #fff':'1px solid rgba(0,0,0,0.1)',
-          boxShadow:isHero?'0 0 10px rgba(255,255,255,0.6)':'none',
+          border:isHero?'2px solid var(--matrix-hero-border)':'1px solid rgba(0,0,0,0.1)',
+          boxShadow:isHero?'0 0 10px rgba(126,184,218,0.45)':'none',
           fontFamily:"'Georgia',serif",position:'relative',
         }}>
           {label}{suffix}
@@ -410,24 +412,24 @@ function HandMatrix({heroCards,onClose}){
   return (
     <div style={{
       position:'fixed',top:0,left:0,right:0,bottom:0,
-      background:'rgba(0,0,0,0.85)',zIndex:1000,
+      background:'var(--overlay)',zIndex:1000,
       display:'flex',alignItems:'center',justifyContent:'center',
       padding:12,animation:'fadeIn 0.25s ease'
     }} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{
-        background:'#12121e',borderRadius:14,padding:'16px 14px',
+        background:'var(--modal-bg)',borderRadius:14,padding:'16px 14px',
         maxWidth:480,width:'100%',maxHeight:'92vh',overflowY:'auto',
-        border:'1px solid rgba(255,255,255,0.1)',
-        boxShadow:'0 20px 60px rgba(0,0,0,0.6)',
+        border:'1px solid var(--border-strong)',
+        boxShadow:'var(--modal-shadow)',
       }}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
           <div>
-            <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:2,color:'#5a8a66',marginBottom:2}}>Starting Hand Chart</div>
+            <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:2,color:'var(--felt-muted)',marginBottom:2}}>Starting Hand Chart</div>
             <h2 style={{fontSize:16,fontWeight:700,fontFamily:"'Georgia',serif",color:'#e6b34d',margin:0}}>169 Hand Matrix</h2>
           </div>
           <button onClick={onClose} style={{
-            width:32,height:32,borderRadius:'50%',border:'1px solid rgba(255,255,255,0.15)',
-            background:'rgba(255,255,255,0.05)',color:'#e8e6df',fontSize:18,cursor:'pointer',
+            width:32,height:32,borderRadius:'50%',border:'1px solid var(--border-button)',
+            background:'var(--surface-3)',color:'var(--text-primary)',fontSize:18,cursor:'pointer',
             display:'flex',alignItems:'center',justifyContent:'center',padding:0,lineHeight:1
           }}>×</button>
         </div>
@@ -436,16 +438,16 @@ function HandMatrix({heroCards,onClose}){
           {gridItems}
         </div>
 
-        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10,fontSize:10,color:'#a8b4a0'}}>
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10,fontSize:10,color:'var(--text-secondary)'}}>
           <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#e6b34d',borderRadius:2}}/>Premium</div>
           <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#4ecdc4',borderRadius:2}}/>Strong</div>
           <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#7eb8da',borderRadius:2}}/>Playable</div>
           <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#c084fc',borderRadius:2}}/>Speculative</div>
-          <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#3a3a3a',borderRadius:2}}/>Fold</div>
+          <div style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'var(--matrix-fold-bg)',borderRadius:2,border:'1px solid var(--border-subtle)'}}/>Fold</div>
         </div>
 
-        <div style={{fontSize:11,color:'#778',lineHeight:1.55,padding:'8px 10px',background:'rgba(255,255,255,0.02)',borderRadius:8,border:'1px solid rgba(255,255,255,0.04)'}}>
-          <b style={{color:'#a8b4a0'}}>How to read:</b> Upper-right (with <b style={{color:'#e8e6df'}}>s</b>) = suited. Lower-left (with <b style={{color:'#e8e6df'}}>o</b>) = offsuit. Diagonal = pairs. {heroI>=0 && <span style={{color:'#e6b34d'}}>Your current hand is marked with ⭐.</span>}
+        <div style={{fontSize:11,color:'var(--text-muted)',lineHeight:1.55,padding:'8px 10px',background:'var(--surface-3)',borderRadius:8,border:'1px solid var(--border-subtle)'}}>
+          <b style={{color:'var(--text-secondary)'}}>How to read:</b> Upper-right (with <b style={{color:'var(--text-primary)'}}>s</b>) = suited. Lower-left (with <b style={{color:'var(--text-primary)'}}>o</b>) = offsuit. Diagonal = pairs. {heroI>=0 && <span style={{color:'#e6b34d'}}>Your current hand is marked with ⭐.</span>}
         </div>
       </div>
     </div>
@@ -461,22 +463,22 @@ function ExplainBox({heroCards,community,equity,phase,numOpp}){
       <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:"#7eb8da",marginBottom:8,fontWeight:700}}>
         🧮 Where {equity.win}% comes from
       </div>
-      <div style={{fontSize:12,color:"#a8b4a0",lineHeight:1.65,fontFamily:"'Georgia',serif",marginBottom:10}}>
+      <div style={{fontSize:12,color:"var(--text-secondary)",lineHeight:1.65,fontFamily:"'Georgia',serif",marginBottom:10}}>
         {ex.main}
       </div>
-      <div style={{padding:"8px 10px",background:"rgba(0,0,0,0.2)",borderRadius:8,marginBottom:8}}>
-        <div style={{fontSize:10,color:"#778",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5,fontWeight:700}}>The simulation</div>
-        <div style={{fontSize:11,color:"#a8b4a0",lineHeight:1.6,fontFamily:"'Courier New',monospace"}}>
+      <div style={{padding:"8px 10px",background:"var(--surface-inset)",borderRadius:8,marginBottom:8}}>
+        <div style={{fontSize:10,color:"var(--text-muted)",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5,fontWeight:700}}>The simulation</div>
+        <div style={{fontSize:11,color:"var(--text-secondary)",lineHeight:1.6,fontFamily:"'Courier New',monospace"}}>
           <div>• Dealt {ex.sims.toLocaleString()} random scenarios</div>
           <div>• Each: {numOpp} opponent{numOpp>1?"s":""} get random cards{phase>0?`, plus ${5-community.length} more board card${5-community.length===1?"":"s"}`:`, plus a random 5-card board`}</div>
           <div>• Compared best 5-card hand for everyone</div>
           <div style={{color:"#4ecdc4",marginTop:4}}>• Won: <b>{ex.wins.toLocaleString()}</b> / {ex.sims.toLocaleString()} = {equity.win}%</div>
-          <div style={{color:"#888"}}>• Tied: <b>{ex.ties.toLocaleString()}</b> / {ex.sims.toLocaleString()} = {equity.tie}%</div>
+          <div style={{color:"var(--text-dim)"}}>• Tied: <b>{ex.ties.toLocaleString()}</b> / {ex.sims.toLocaleString()} = {equity.tie}%</div>
           <div style={{color:"#ef4444"}}>• Lost: <b>{ex.losses.toLocaleString()}</b> / {ex.sims.toLocaleString()} = {(100-ex.winPct-ex.tiePct).toFixed(1)}%</div>
         </div>
       </div>
-      <div style={{fontSize:11,color:"#778",lineHeight:1.55,fontStyle:"italic"}}>
-        💡 This is <b style={{color:"#a8b4a0",fontStyle:"normal"}}>Monte Carlo simulation</b> — instead of exact probabilities (very complex with hidden cards), we run thousands of random trials and count outcomes.
+      <div style={{fontSize:11,color:"var(--text-muted)",lineHeight:1.55,fontStyle:"italic"}}>
+        💡 This is <b style={{color:"var(--text-secondary)",fontStyle:"normal"}}>Monte Carlo simulation</b> — instead of exact probabilities (very complex with hidden cards), we run thousands of random trials and count outcomes.
       </div>
     </div>
   );
@@ -495,20 +497,21 @@ function CoachBox({tip}){
           <span style={{fontSize:16}}>{iconMap[tip.action]}</span>
           <span style={{fontSize:14,fontWeight:800,color:colorMap[tip.action],fontFamily:"'Georgia',serif",textTransform:"uppercase",letterSpacing:1}}>{tip.action}</span>
           {tip.altAction && (
-            <span style={{fontSize:10,color:"#778",marginLeft:4}}>or {tip.altAction.toLowerCase()}</span>
+            <span style={{fontSize:10,color:"var(--text-muted)",marginLeft:4}}>or {tip.altAction.toLowerCase()}</span>
           )}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4}}>
-          <span style={{fontSize:9,color:"#667",textTransform:"uppercase",letterSpacing:0.5}}>Conf</span>
+          <span style={{fontSize:9,color:"var(--text-faint)",textTransform:"uppercase",letterSpacing:0.5}}>Conf</span>
           <span style={{fontSize:11,color:tip.confidence==="high"?"#4ecdc4":tip.confidence==="medium"?"#e6b34d":"#ef4444",letterSpacing:1}}>{confDots[tip.confidence]}</span>
         </div>
       </div>
-      <div style={{fontSize:12,color:"#a8b4a0",lineHeight:1.65,fontFamily:"'Georgia',serif"}}>{tip.reasoning}</div>
+      <div style={{fontSize:12,color:"var(--text-secondary)",lineHeight:1.65,fontFamily:"'Georgia',serif"}}>{tip.reasoning}</div>
     </div>
   );
 }
 
 export default function PokerGame(){
+  const { theme, toggleTheme } = useTheme();
   const [phase,setPhase] = useState(0);
   const [heroCards,setHeroCards] = useState([]);
   const [oppCards,setOppCards] = useState([]);
@@ -658,17 +661,18 @@ export default function PokerGame(){
   const isTie = tiedIndices.length > 1;
 
   return (
-    <div style={{minHeight:"100vh",background:"radial-gradient(ellipse at 50% 20%,#1a3324 0%,#0f1f17 40%,#0a0f0c 100%)",color:"#e8e6df",fontFamily:"'Segoe UI',sans-serif",padding:"16px 12px",maxWidth:500,margin:"0 auto"}}>
+    <div className="app-shell" style={{fontFamily:"'Segoe UI',sans-serif",padding:"16px 12px",maxWidth:500,margin:"0 auto",position:"relative"}}>
+      <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
       <div style={{textAlign:"center",marginBottom:14}}>
-        <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:4,color:"#3d6b4a"}}>Texas Hold'em</div>
+        <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:4,color:"var(--felt)"}}>Texas Hold'em</div>
         <h1 style={{fontSize:22,fontWeight:800,fontFamily:"'Georgia',serif",margin:"2px 0",background:"linear-gradient(135deg,#e6b34d,#c8943a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
           Hold'em Coach
         </h1>
-        <div style={{fontSize:11,color:"#4a7c5c",marginTop:2}}>Aggression first — tap "How?" to see the math</div>
+        <div style={{fontSize:11,color:"var(--felt-light)",marginTop:2}}>Aggression first — tap "How?" to see the math</div>
       </div>
 
-      <div style={{display:"flex",justifyContent:"center",gap:12,fontSize:11,color:"#5a8a66",marginBottom:10,flexWrap:"wrap"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:12,fontSize:11,color:"var(--felt-muted)",marginBottom:10,flexWrap:"wrap"}}>
         <span>💰 <b style={{color:"#e6b34d"}}>{chips}</b></span>
         <span>🏆 <b style={{color:"#4ecdc4"}}>{stats.won}W</b>/<b style={{color:"#ef4444"}}>{stats.played-stats.won-stats.folded}L</b>/<b>{stats.folded}F</b></span>
         <span>🎯 <b style={{color:parseInt(coachAccuracy)>=70?"#4ecdc4":parseInt(coachAccuracy)>=40?"#e6b34d":"#ef4444"}}>{coachAccuracy}%</b></span>
@@ -688,12 +692,12 @@ export default function PokerGame(){
       {heroCards.length===0 && (
         <div style={{textAlign:"center",padding:"30px 0"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:20}}>
-            <span style={{fontSize:12,color:"#5a8a66"}}>Opponents:</span>
+            <span style={{fontSize:12,color:"var(--felt-muted)"}}>Opponents:</span>
             {[1,2,3,5].map(n=>(
               <button key={n} onClick={()=>setNumOpp(n)} style={{
-                width:34,height:34,borderRadius:"50%",border:numOpp===n?"2px solid #e6b34d":"1px solid #2a4a35",
+                width:34,height:34,borderRadius:"50%",border:numOpp===n?"2px solid #e6b34d":"1px solid var(--felt-border-soft)",
                 background:numOpp===n?"rgba(230,179,77,0.15)":"transparent",
-                color:numOpp===n?"#e6b34d":"#5a8a66",fontSize:14,fontWeight:700,cursor:"pointer"
+                color:numOpp===n?"#e6b34d":"var(--felt-muted)",fontSize:14,fontWeight:700,cursor:"pointer"
               }}>{n}</button>
             ))}
           </div>
@@ -703,9 +707,9 @@ export default function PokerGame(){
             color:"#e6b34d",fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:"'Georgia',serif",
             letterSpacing:1,boxShadow:"0 0 24px rgba(230,179,77,0.08)"
           }}>Deal Me In</button>
-          <div style={{marginTop:24,padding:"14px 18px",background:"rgba(255,255,255,0.02)",borderRadius:12,border:"1px solid rgba(255,255,255,0.04)",textAlign:"left",maxWidth:400,margin:"24px auto 0"}}>
-            <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:"#4a6b52",marginBottom:6,fontWeight:700}}>📖 The Math of Folding</div>
-            <div style={{fontSize:12,color:"#7a9a82",lineHeight:1.7,fontFamily:"'Georgia',serif"}}>
+          <div style={{marginTop:24,padding:"14px 18px",background:"var(--surface-3)",borderRadius:12,border:"1px solid var(--border-subtle)",textAlign:"left",maxWidth:400,margin:"24px auto 0"}}>
+            <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:"var(--felt-light)",marginBottom:6,fontWeight:700}}>📖 The Math of Folding</div>
+            <div style={{fontSize:12,color:"var(--text-muted)",lineHeight:1.7,fontFamily:"'Georgia',serif"}}>
               Only <b style={{color:"#e6b34d"}}>~17%</b> of starting hands are profitable. The other 83% should be folded. The discipline of folding bad hands is what makes premium hands profitable.
             </div>
           </div>
@@ -732,13 +736,13 @@ export default function PokerGame(){
                     <Card r={opp[1].r} s={opp[1].s} hidden={!showOpp} small glow={isWinner?(isTie?"#e6b34d":"#ef4444"):null}/>
                   </div>
                   {showOpp && (
-                    <div style={{fontSize:9,color:isWinner?(isTie?"#e6b34d":"#ef4444"):"#778",marginTop:3,fontWeight:isWinner?700:400}}>
+                    <div style={{fontSize:9,color:isWinner?(isTie?"#e6b34d":"#ef4444"):"var(--text-muted)",marginTop:3,fontWeight:isWinner?700:400}}>
                       {isWinner && (isTie?"🤝 TIE":"🏆 WINS")}
                       {!isWinner && evalBest([...opp,...community])?.name}
                     </div>
                   )}
                   {showOpp && isWinner && (
-                    <div style={{fontSize:8,color:"#a8b4a0",marginTop:1}}>{evalBest([...opp,...community])?.name}</div>
+                    <div style={{fontSize:8,color:"var(--text-secondary)",marginTop:1}}>{evalBest([...opp,...community])?.name}</div>
                   )}
                 </div>
               );
@@ -746,14 +750,14 @@ export default function PokerGame(){
           </div>
 
           <div style={{textAlign:"center",marginBottom:6}}>
-            <span style={{fontSize:9,color:"#5a8a66",textTransform:"uppercase",letterSpacing:1}}>Pot</span>
+            <span style={{fontSize:9,color:"var(--felt-muted)",textTransform:"uppercase",letterSpacing:1}}>Pot</span>
             <div style={{fontSize:20,fontWeight:800,color:"#e6b34d",fontFamily:"'Georgia',serif"}}>{pot}</div>
           </div>
 
           <div style={{display:"flex",justifyContent:"center",gap:5,marginBottom:14,minHeight:78}}>
             {[0,1,2,3,4].map(i=>{
               if(i<visibleCommunity.length) return <Card key={i} r={visibleCommunity[i].r} s={visibleCommunity[i].s}/>;
-              return <div key={i} style={{width:52,height:74,borderRadius:7,border:"1.5px dashed #1e3a28",background:"rgba(255,255,255,0.015)"}}/>;
+              return <div key={i} style={{width:52,height:74,borderRadius:7,border:"1.5px dashed var(--felt-border)",background:"var(--card-slot)"}}/>;
             })}
           </div>
 
@@ -762,16 +766,16 @@ export default function PokerGame(){
               <div key={i} style={{
                 padding:"2px 8px",borderRadius:8,fontSize:9,fontWeight:600,
                 background:i===phase?"rgba(230,179,77,0.18)":i<phase?"rgba(78,205,196,0.08)":"transparent",
-                color:i===phase?"#e6b34d":i<phase?"#4ecdc4":"#2e4a38",
+                color:i===phase?"#e6b34d":i<phase?"#4ecdc4":"var(--felt-dark)",
                 border:i===phase?"1px solid rgba(230,179,77,0.25)":"1px solid transparent"
               }}>{label}</div>
             ))}
           </div>
 
           <div style={{
-            background: showOpp && heroIsWinner ? (isTie?"rgba(230,179,77,0.08)":"rgba(78,205,196,0.08)") : "rgba(255,255,255,0.025)",
+            background: showOpp && heroIsWinner ? (isTie?"rgba(230,179,77,0.08)":"rgba(78,205,196,0.08)") : "var(--surface-1)",
             borderRadius:14,padding:12,
-            border: showOpp && heroIsWinner ? (isTie?"1.5px solid rgba(230,179,77,0.5)":"1.5px solid rgba(78,205,196,0.5)") : "1px solid rgba(255,255,255,0.05)",
+            border: showOpp && heroIsWinner ? (isTie?"1.5px solid rgba(230,179,77,0.5)":"1.5px solid rgba(78,205,196,0.5)") : "1px solid var(--border-medium)",
             boxShadow: showOpp && heroIsWinner ? (isTie?"0 0 16px rgba(230,179,77,0.2)":"0 0 16px rgba(78,205,196,0.2)") : "none",
             marginBottom:10,
             transition:"all 0.4s ease"
@@ -784,7 +788,7 @@ export default function PokerGame(){
                   <div style={{
                     position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",
                     fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,
-                    background:isTie?"#e6b34d":"#4ecdc4",color:"#0a0f0c",
+                    background:isTie?"#e6b34d":"#4ecdc4",color:"var(--win-badge-text)",
                     whiteSpace:"nowrap",fontFamily:"'Georgia',serif",
                     boxShadow:"0 2px 6px rgba(0,0,0,0.3)"
                   }}>{isTie?"🤝 TIE":"🏆 WINS"}</div>
@@ -793,7 +797,7 @@ export default function PokerGame(){
               <div style={{flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
                   <span style={{fontSize:9,padding:"2px 6px",borderRadius:5,background:`${strengthColors[cat]}20`,color:strengthColors[cat],fontWeight:700,textTransform:"uppercase",letterSpacing:0.5}}>{strengthLabels[cat]}</span>
-                  {heroEvalNow && <span style={{fontSize:11,color:"#8a9a84"}}>{heroEvalNow.name}</span>}
+                  {heroEvalNow && <span style={{fontSize:11,color:"var(--history-text)"}}>{heroEvalNow.name}</span>}
                 </div>
                 {equity && (
                   <div>
@@ -814,7 +818,7 @@ export default function PokerGame(){
                     </div>
                     <div style={{marginTop:4,display:"flex",flexDirection:"column",gap:2}}>
                       <EquityBar win={equity.win} label="Win" color="#4ecdc4"/>
-                      <EquityBar win={equity.tie} label="Tie" color="#778"/>
+                      <EquityBar win={equity.tie} label="Tie" color="var(--text-dim)"/>
                       <EquityBar win={(100-parseFloat(equity.win)-parseFloat(equity.tie)).toFixed(1)} label="Lose" color="#ef4444"/>
                     </div>
                   </div>
@@ -859,17 +863,17 @@ export default function PokerGame(){
             <div style={{textAlign:"center",marginBottom:12,animation:"fadeIn 0.5s ease"}}>
               <div style={{
                 fontSize:18,fontWeight:800,fontFamily:"'Georgia',serif",
-                color:result==="win"?"#4ecdc4":result==="tie"?"#e6b34d":result==="fold"?"#6b8f72":"#ef4444",
+                color:result==="win"?"#4ecdc4":result==="tie"?"#e6b34d":result==="fold"?"var(--felt-dark)":"#ef4444",
                 marginBottom:4
               }}>
                 {result==="win"?"🏆 You Win!":result==="tie"?"🤝 Split Pot":result==="fold"?"🏳️ Folded":"💀 You Lose"}
               </div>
               {result!=="fold" && heroEvalNow && (
-                <div style={{fontSize:12,color:"#8a9a84",marginBottom:2}}>{heroEvalNow.name}</div>
+                <div style={{fontSize:12,color:"var(--history-text)",marginBottom:2}}>{heroEvalNow.name}</div>
               )}
               {result==="fold" && heroEvalNow && foldOutcome && (
                 <div style={{marginTop:6,padding:"8px 12px",borderRadius:8,background:foldOutcome==="win"?"rgba(239,68,68,0.08)":"rgba(78,205,196,0.08)",border:`1px solid ${foldOutcome==="win"?"rgba(239,68,68,0.2)":"rgba(78,205,196,0.2)"}`}}>
-                  <div style={{fontSize:11,color:"#aaa",marginBottom:2}}>Your hand: <b style={{color:"#e8e6df"}}>{heroEvalNow.name}</b></div>
+                  <div style={{fontSize:11,color:"var(--text-muted)",marginBottom:2}}>Your hand: <b style={{color:"var(--text-primary)"}}>{heroEvalNow.name}</b></div>
                   <div style={{fontSize:12,color:foldOutcome==="win"?"#ef4444":"#4ecdc4",fontFamily:"'Georgia',serif"}}>
                     {foldOutcome==="win"?"⚠️ You would have won — but variance happens. Don't second-guess disciplined folds.":foldOutcome==="tie"?"🤝 Would've split the pot — solid fold either way.":"✓ Good fold — you would have lost."}
                   </div>
@@ -887,17 +891,17 @@ export default function PokerGame(){
 
       {history.length>0 && (
         <div style={{marginTop:14}}>
-          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:2,color:"#3d6b4a",marginBottom:6,fontWeight:700}}>Hand History</div>
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:2,color:"var(--felt)",marginBottom:6,fontWeight:700}}>Hand History</div>
           <div style={{display:"flex",flexDirection:"column",gap:3}}>
             {history.map((h,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:8,background:"rgba(255,255,255,0.015)",border:"1px solid rgba(255,255,255,0.025)"}}>
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:8,background:"var(--surface-2)",border:"1px solid var(--border-subtle)"}}>
                 <div style={{display:"flex",gap:2}}>{h.cards.map((c,j)=><Card key={j} r={c.r} s={c.s} small/>)}</div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:10,color:"#8a9a84",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{h.hand}</div>
+                  <div style={{fontSize:10,color:"var(--history-text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{h.hand}</div>
                 </div>
-                <span style={{fontSize:10,color:"#667"}}>{h.win}%</span>
+                <span style={{fontSize:10,color:"var(--text-faint)"}}>{h.win}%</span>
                 <span style={{fontSize:10,color:h.followedCoach?"#4ecdc4":"#f59e0b"}}>{h.followedCoach?"🎯":"⚡"}</span>
-                <span style={{fontSize:12,fontWeight:700,color:h.result==="win"?"#4ecdc4":h.result==="fold"?"#6b8f72":"#ef4444",width:14}}>{h.result==="win"?"W":h.result==="fold"?"F":"L"}</span>
+                <span style={{fontSize:12,fontWeight:700,color:h.result==="win"?"#4ecdc4":h.result==="fold"?"var(--felt-dark)":"#ef4444",width:14}}>{h.result==="win"?"W":h.result==="fold"?"F":"L"}</span>
               </div>
             ))}
           </div>

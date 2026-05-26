@@ -1,0 +1,142 @@
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-page: #0a0f0c;
+  --bg-gradient-start: #1a3324;
+  --bg-gradient-mid: #0f1f17;
+  --bg-gradient-end: #0a0f0c;
+
+  --text-primary: #e8e6df;
+  --text-secondary: #a8b4a0;
+  --text-muted: #778888;
+  --text-faint: #667777;
+  --text-dim: #888888;
+
+  --felt: #3d6b4a;
+  --felt-light: #4a7c5c;
+  --felt-muted: #5a8a66;
+  --felt-dark: #2e4a38;
+  --felt-border: #1e3a28;
+  --felt-border-soft: #2a4a35;
+
+  --surface-1: rgba(255, 255, 255, 0.025);
+  --surface-2: rgba(255, 255, 255, 0.015);
+  --surface-3: rgba(255, 255, 255, 0.02);
+  --surface-inset: rgba(0, 0, 0, 0.2);
+
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-medium: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.1);
+  --border-button: rgba(255, 255, 255, 0.15);
+
+  --overlay: rgba(0, 0, 0, 0.85);
+  --modal-bg: #12121e;
+  --modal-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+
+  --bar-track: rgba(255, 255, 255, 0.06);
+  --hero-highlight: #ffffff;
+
+  --matrix-fold-bg: #3a3a3a;
+  --matrix-fold-text: #888888;
+  --matrix-header: #888888;
+  --matrix-hero-border: #ffffff;
+
+  --card-slot: rgba(255, 255, 255, 0.015);
+  --card-back-start: #1a3a5c;
+  --card-back-end: #0d2137;
+  --card-back-border: #2a5a8a;
+  --card-back-pattern: #0f2d4a;
+
+  --history-text: #8a9a84;
+
+  --theme-toggle-bg: rgba(255, 255, 255, 0.06);
+  --theme-toggle-border: rgba(255, 255, 255, 0.12);
+  --theme-toggle-text: #a8b4a0;
+
+  --win-badge-text: #0a0f0c;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-page: #f4f7f2;
+  --bg-gradient-start: #dceee0;
+  --bg-gradient-mid: #edf4ea;
+  --bg-gradient-end: #f7f9f5;
+
+  --text-primary: #1a2e22;
+  --text-secondary: #3d5647;
+  --text-muted: #5c7364;
+  --text-faint: #6b8575;
+  --text-dim: #7a9184;
+
+  --felt: #2d6a3e;
+  --felt-light: #3d7a4e;
+  --felt-muted: #4a8560;
+  --felt-dark: #6b9580;
+  --felt-border: #b8d4be;
+  --felt-border-soft: #c5ddcb;
+
+  --surface-1: rgba(255, 255, 255, 0.82);
+  --surface-2: rgba(255, 255, 255, 0.65);
+  --surface-3: rgba(255, 255, 255, 0.75);
+  --surface-inset: rgba(45, 106, 62, 0.06);
+
+  --border-subtle: rgba(45, 106, 62, 0.1);
+  --border-medium: rgba(45, 106, 62, 0.14);
+  --border-strong: rgba(45, 106, 62, 0.2);
+  --border-button: rgba(45, 106, 62, 0.22);
+
+  --overlay: rgba(26, 46, 34, 0.45);
+  --modal-bg: #ffffff;
+  --modal-shadow: 0 20px 60px rgba(45, 106, 62, 0.18);
+
+  --bar-track: rgba(45, 106, 62, 0.12);
+  --hero-highlight: #1a2e22;
+
+  --matrix-fold-bg: #e5e7eb;
+  --matrix-fold-text: #6b7280;
+  --matrix-header: #6b7280;
+  --matrix-hero-border: #1a2e22;
+
+  --card-slot: rgba(45, 106, 62, 0.06);
+  --card-back-start: #2a5080;
+  --card-back-end: #1a3a5c;
+  --card-back-border: #3a6a9a;
+  --card-back-pattern: #224a72;
+
+  --history-text: #4a6352;
+
+  --theme-toggle-bg: rgba(255, 255, 255, 0.9);
+  --theme-toggle-border: rgba(45, 106, 62, 0.18);
+  --theme-toggle-text: #3d5647;
+
+  --win-badge-text: #ffffff;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--bg-gradient-start) 0%,
+    var(--bg-gradient-mid) 40%,
+    var(--bg-gradient-end) 100%
+  );
+  color: var(--text-primary);
+  transition: background 0.25s ease, color 0.25s ease;
+}
