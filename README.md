@@ -67,7 +67,8 @@ directory is empty.
 Two workflows run on every push to `main`:
 
 - **`.github/workflows/deploy.yml`** — builds the Vite app and deploys to
-  GitHub Pages. Live at https://lesnerd.github.io/holdem-coach/
+  GitHub Pages, then records the deployment in the Fly runtime environment
+  `github_production`. Live at https://lesnerd.github.io/holdem-coach/
 - **`.github/workflows/fly-docker.yml`** — on every push to `main` / version tag:
   1. **Tar archive** — builds the app, packages `dist/` as
      `holdem-coach-{version}.tar.gz`, uploads to Fly generic storage, and on

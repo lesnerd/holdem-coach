@@ -48,3 +48,41 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+      # Record this Pages deploy in Fly runtime environment github_production.
+      # Uses an environment-scoped pull token (FLY_USERNAME / FLY_TOKEN secrets).
+      # Retries until fly-docker.yml finishes pushing the matching image.
+      - name: Setup JFrog Fly
+        uses: jfrog/fly-action@v1
+
+      - name: Record deployment in Fly github_production
+        env:
+          FLY_ENV_USER: ${{ secrets.FLY_USERNAME }}
+          FLY_ENV_TOKEN: ${{ secrets.FLY_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REGISTRY="${FLY_REGISTRY_SUBDOMAIN}"
+          TAG="${{ github.sha }}"
+          MANIFEST_URL="https://${REGISTRY}/fly/v2/docker/holdem-coach/manifests/${TAG}"
+          ACCEPT='application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+
+          for attempt in $(seq 1 36); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' \
+              -u "${FLY_ENV_USER}:${FLY_ENV_TOKEN}" \
+              -H "Accept: ${ACCEPT}" \
+              "${MANIFEST_URL}")"
+            if [ "$code" = "200" ]; then
+              curl -fsS -u "${FLY_ENV_USER}:${FLY_ENV_TOKEN}" \
+                -H "Accept: ${ACCEPT}" \
+                -o /dev/null \
+                "${MANIFEST_URL}"
+              echo "Recorded pull for holdem-coach:${TAG} in github_production (attempt ${attempt})"
+              exit 0
+            fi
+            echo "Image not ready yet (HTTP ${code}), waiting... (attempt ${attempt}/36)"
+            sleep 10
+          done
+
+          echo "Timed out waiting for holdem-coach:${TAG}" >&2
+          exit 1

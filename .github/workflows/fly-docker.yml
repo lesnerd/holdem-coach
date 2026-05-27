@@ -166,6 +166,33 @@ jobs:
             docker push "$tag"
           done
 
+      - name: Record deployment in Fly github_production
+        if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          FLY_ENV_USER: ${{ secrets.FLY_USERNAME }}
+          FLY_ENV_TOKEN: ${{ secrets.FLY_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REGISTRY="${FLY_REGISTRY_SUBDOMAIN}"
+          TAG="${{ steps.release.outputs.version }}"
+          MANIFEST_URL="https://${REGISTRY}/fly/v2/docker/holdem-coach/manifests/${TAG}"
+          ACCEPT='application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+
+          code="$(curl -s -o /dev/null -w '%{http_code}' \
+            -u "${FLY_ENV_USER}:${FLY_ENV_TOKEN}" \
+            -H "Accept: ${ACCEPT}" \
+            "${MANIFEST_URL}")"
+          if [ "$code" != "200" ]; then
+            echo "Expected manifest for holdem-coach:${TAG}, got HTTP ${code}" >&2
+            exit 1
+          fi
+          curl -fsS -u "${FLY_ENV_USER}:${FLY_ENV_TOKEN}" \
+            -H "Accept: ${ACCEPT}" \
+            -o /dev/null \
+            "${MANIFEST_URL}"
+          echo "Recorded pull for holdem-coach:${TAG} in github_production"
+
       - name: Job summary
         if: always()
         shell: bash
