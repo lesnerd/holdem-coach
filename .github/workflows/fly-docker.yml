@@ -65,6 +65,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build static app and create release archive
+        # Static tarball for third-party distribution (generic Fly package).
+        # Docker image build/push continues below — this does not replace it.
         shell: bash
         run: |
           set -euo pipefail
@@ -102,6 +104,7 @@ jobs:
           type: generic
 
       - name: Set up Docker Buildx
+        # Docker image — still built and pushed on every non-PR run.
         uses: docker/setup-buildx-action@v4
 
       - name: Build image (load to local docker for smoke test)

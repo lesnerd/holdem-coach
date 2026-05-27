@@ -68,12 +68,12 @@ Two workflows run on every push to `main`:
 
 - **`.github/workflows/deploy.yml`** — builds the Vite app and deploys to
   GitHub Pages. Live at https://lesnerd.github.io/holdem-coach/
-- **`.github/workflows/fly-docker.yml`** — builds the app, packages `dist/` as
-  `holdem-coach-{version}.tar.gz`, uploads it to Fly generic storage as
-  `holdem-coach`, builds/pushes the Docker image to
-  `easycompany.jfrog.io/docker/holdem-coach:{latest,<sha>}`, and on version tags
-  (`v*.*.*`) automatically distributes the archive for public download at
-  `easycompany.jfrog.io/public/generic/holdem-coach/{tag}/holdem-coach-{tag}.tar.gz`.
+- **`.github/workflows/fly-docker.yml`** — on every push to `main` / version tag:
+  1. **Tar archive** — builds the app, packages `dist/` as
+     `holdem-coach-{version}.tar.gz`, uploads to Fly generic storage, and on
+     version tags (`v*.*.*`) distributes it publicly for third-party download.
+  2. **Docker image** — still builds, smoke-tests, and pushes
+     `easycompany.jfrog.io/docker/holdem-coach:{latest,<sha>,v*.*.*}` (unchanged).
 
 The Pages workflow requires the repo to be **public** (or on a paid plan) and
 Pages to be enabled with **Source: GitHub Actions** under Settings → Pages.
