@@ -74,11 +74,12 @@ jobs:
           tar -czf "$ARCHIVE" -C dist .
           echo "Created ${ARCHIVE} ($(du -h "$ARCHIVE" | cut -f1))"
           tar -tzf "$ARCHIVE" | head -20
-          if ! tar -tzf "$ARCHIVE" | grep -q '^index.html$'; then
+          LISTING="$(tar -tzf "$ARCHIVE" | sed 's|^\./||')"
+          if ! echo "$LISTING" | grep -qx 'index.html'; then
             echo "Archive missing index.html at root"
             exit 1
           fi
-          if ! tar -tzf "$ARCHIVE" | grep -q '^assets/'; then
+          if ! echo "$LISTING" | grep -q '^assets/'; then
             echo "Archive missing assets/ directory"
             exit 1
           fi
