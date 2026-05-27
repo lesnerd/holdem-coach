@@ -33,14 +33,6 @@ jobs:
 
       - run: npm run build
 
-      # Track the Pages build as a Fly release so it shows up alongside Docker images.
-      - uses: jfrog/fly-action/upload@v1
-        with:
-          name: holdem-coach-pages
-          version: ${{ github.sha }}
-          files: |
-            dist/**
-
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5

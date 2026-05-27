@@ -28,31 +28,80 @@ jobs:
       - name: Setup JFrog Fly
         uses: jfrog/fly-action@v1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
 
-      - name: Compute image tags
-        id: meta
+      - name: Compute release metadata
+        id: release
         shell: bash
         run: |
           REGISTRY="${{ env.FLY_REGISTRY_SUBDOMAIN }}/docker"
           IMAGE_NAME="holdem-coach"
-          
-          TAGS=""
+
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            VERSION="${{ github.sha }}"
             TAGS="${REGISTRY}/${IMAGE_NAME}:latest"
             TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:${{ github.sha }}"
           elif [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-            TAGS="${REGISTRY}/${IMAGE_NAME}:${TAG_NAME}"
+            VERSION="${{ github.ref_name }}"
+            TAGS="${REGISTRY}/${IMAGE_NAME}:${VERSION}"
             TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:latest"
           else
-            BRANCH_NAME="${{ github.ref_name }}"
-            TAGS="${REGISTRY}/${IMAGE_NAME}:${BRANCH_NAME}-${{ github.sha }}"
+            VERSION="${{ github.ref_name }}-${{ github.sha }}"
+            TAGS="${REGISTRY}/${IMAGE_NAME}:${{ github.ref_name }}-${{ github.sha }}"
           fi
-          
-          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
-          echo "registry=${REGISTRY}" >> "$GITHUB_OUTPUT"
+
+          ARCHIVE="holdem-coach-${VERSION}.tar.gz"
+
+          {
+            echo "version=${VERSION}"
+            echo "archive=${ARCHIVE}"
+            echo "tags=${TAGS}"
+            echo "registry=${REGISTRY}"
+            echo "is_tag=$([[ '${{ github.ref }}' =~ ^refs/tags/v ]] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build static app and create release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          ARCHIVE="${{ steps.release.outputs.archive }}"
+          tar -czf "$ARCHIVE" -C dist .
+          echo "Created ${ARCHIVE} ($(du -h "$ARCHIVE" | cut -f1))"
+          tar -tzf "$ARCHIVE" | head -20
+          if ! tar -tzf "$ARCHIVE" | grep -q '^index.html$'; then
+            echo "Archive missing index.html at root"
+            exit 1
+          fi
+          if ! tar -tzf "$ARCHIVE" | grep -q '^assets/'; then
+            echo "Archive missing assets/ directory"
+            exit 1
+          fi
+
+      - name: Upload release archive to Fly
+        if: github.event_name != 'pull_request'
+        uses: jfrog/fly-action/upload@v1
+        with:
+          name: holdem-coach
+          version: ${{ steps.release.outputs.version }}
+          files: |
+            ${{ steps.release.outputs.archive }}
+
+      - name: Distribute release archive publicly
+        if: github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/v')
+        uses: jfrog/fly-action/distribute@v1
+        with:
+          name: holdem-coach
+          version: ${{ steps.release.outputs.version }}
+          type: generic
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
 
       - name: Build image (load to local docker for smoke test)
         uses: docker/build-push-action@v7
@@ -61,7 +110,7 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.release.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -69,8 +118,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # meta.outputs.tags is comma-separated; normalize to newlines and take the first.
-          tag="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | head -n1)"
+          tag="$(printf '%s\n' "${{ steps.release.outputs.tags }}" | tr ',' '\n' | head -n1)"
           echo "Running smoke test against: $tag"
           docker run -d --name smoke -p 8080:80 "$tag"
 
@@ -108,9 +156,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # meta.outputs.tags is comma-separated; iterate one tag per line.
-          # Trailing \n in printf is required so `read` doesn't drop the last tag on EOF.
-          printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n' | while IFS= read -r tag; do
+          printf '%s\n' "${{ steps.release.outputs.tags }}" | tr ',' '\n' | while IFS= read -r tag; do
             [ -z "$tag" ] && continue
             echo "Pushing $tag"
             docker push "$tag"
@@ -121,18 +167,29 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Fly Docker Build Summary"
+            echo "## Fly Release Summary"
             echo ""
             echo "**Event:** \`${{ github.event_name }}\`"
             echo "**Ref:** \`${{ github.ref }}\`"
-            echo "**Registry:** \`${{ env.FLY_REGISTRY_SUBDOMAIN }}/docker\`"
+            echo "**Version:** \`${{ steps.release.outputs.version }}\`"
+            echo "**Archive:** \`${{ steps.release.outputs.archive }}\`"
             echo ""
-            echo "### Tags"
+            echo "### Docker tags"
             echo '```'
-            printf '%s\n' "${{ steps.meta.outputs.tags }}" | tr ',' '\n'
+            printf '%s\n' "${{ steps.release.outputs.tags }}" | tr ',' '\n'
             echo '```'
+            if [ "${{ github.event_name }}" != "pull_request" ]; then
+              echo ""
+              echo "### Generic archive (Fly)"
+              echo "- Package: \`holdem-coach\`"
+              echo "- Version: \`${{ steps.release.outputs.version }}\`"
+              if [[ "${{ steps.release.outputs.is_tag }}" == "true" ]]; then
+                echo "- Public download: \`${{ env.FLY_REGISTRY_SUBDOMAIN }}/public/generic/holdem-coach/${{ steps.release.outputs.version }}/${{ steps.release.outputs.archive }}\`"
+                echo "- Latest public: \`${{ env.FLY_REGISTRY_SUBDOMAIN }}/public/generic/holdem-coach/[LATEST]/${{ steps.release.outputs.archive }}\`"
+              fi
+            fi
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo ""
-              echo "_PR build — image was built and smoke-tested but not pushed._"
+              echo "_PR build — archive and image were built and smoke-tested but not pushed._"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
