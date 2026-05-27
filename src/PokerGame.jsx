@@ -143,6 +143,50 @@ const FOLD_REASONS = [
 
 function pick(arr,seed){ return arr[seed%arr.length]; }
 
+function buildEquityGuessOptions(actualWin){
+  const correct=parseFloat(actualWin);
+  const options=new Set([correct.toFixed(1)]);
+  const offsets=[4,8,12,16,-5,-9,-14,20,-18,25,-22,30];
+  let i=0;
+  while(options.size<4 && i<40){
+    const offset=offsets[i%offsets.length]+Math.floor(i/offsets.length)*(i%2?2:-2);
+    let candidate=Math.round((correct+offset)*10)/10;
+    candidate=Math.max(6,Math.min(91,candidate));
+    if(Math.abs(candidate-correct)>=2.5) options.add(candidate.toFixed(1));
+    i++;
+  }
+  while(options.size<4){
+    let candidate=Math.round((Math.random()*75+12)*10)/10;
+    if(Math.abs(candidate-correct)>=2.5) options.add(candidate.toFixed(1));
+  }
+  return shuffle([...options]);
+}
+
+function EquityGuessPrompt({options,numOpp,onPick}){
+  return (
+    <div style={{background:"var(--surface-3)",borderRadius:12,padding:"14px 12px",border:"1px solid var(--border-medium)",marginBottom:10,animation:"fadeIn 0.3s ease"}}>
+      <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:"#7eb8da",marginBottom:4,fontWeight:700}}>
+        🎯 Guess Your Equity
+      </div>
+      <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:12,lineHeight:1.55,fontFamily:"'Georgia',serif"}}>
+        What's your pre-flop win percentage against {numOpp} opponent{numOpp>1?"s":""}? Pick the closest estimate.
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {options.map(opt=>(
+          <button key={opt} onClick={()=>onPick(opt)} style={{
+            padding:"14px 0",borderRadius:10,
+            border:"1px solid rgba(126,184,218,0.35)",
+            background:"rgba(126,184,218,0.08)",
+            color:"#7eb8da",fontSize:18,fontWeight:800,cursor:"pointer",
+            fontFamily:"'Georgia',serif",
+            boxShadow:"0 2px 8px rgba(0,0,0,0.08)",
+          }}>{opt}%</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function generateTip(heroCards,community,equity,phase,numOpp,seed){
   const cat=handCategory(heroCards);
   const w=parseFloat(equity.win);
@@ -530,6 +574,9 @@ export default function PokerGame(){
   const [tipSeed,setTipSeed] = useState(0);
   const [showExplain,setShowExplain] = useState(false);
   const [showMatrix,setShowMatrix] = useState(false);
+  const [guessPending,setGuessPending] = useState(false);
+  const [guessOptions,setGuessOptions] = useState([]);
+  const [userGuess,setUserGuess] = useState(null);
   const prevEqRef = useRef(null);
 
   const deal = useCallback(()=>{
@@ -544,9 +591,18 @@ export default function PokerGame(){
     const seed=Math.floor(Math.random()*10000); setTipSeed(seed);
     const eq=simulate(hero,[],numOpp,1500);
     setEquity(eq);
+    setGuessOptions(buildEquityGuessOptions(eq.win));
+    setGuessPending(true);
+    setUserGuess(null);
+    setShowExplain(false);
     setTip(generateTip(hero,[],eq,0,numOpp,seed));
     prevEqRef.current=eq;
   },[numOpp]);
+
+  const submitEquityGuess = useCallback((guess)=>{
+    setUserGuess(guess);
+    setGuessPending(false);
+  },[]);
 
   const wasCorrect = useCallback((userAction,coachAction,coachAlt)=>{
     return userAction.toUpperCase()===coachAction || (coachAlt&&userAction.toUpperCase()===coachAlt);
@@ -603,6 +659,7 @@ export default function PokerGame(){
     setEquity(null); setPhase(0); setResult(null);
     setShowOpp(false); setTip(null); setLastAction(null);
     setShowExplain(false);
+    setGuessPending(false); setGuessOptions([]); setUserGuess(null);
   };
 
   // Show all 5 community cards when folded or at showdown
@@ -618,6 +675,7 @@ export default function PokerGame(){
   const winVal = equity ? parseFloat(equity.win) : 0;
   const eqDelta = prevEqRef.current && equity && phase>0 ? parseFloat(equity.win)-parseFloat(prevEqRef.current.win) : null;
   const coachAccuracy = stats.played>0 ? ((stats.correctPlays/stats.played)*100).toFixed(0) : 0;
+  const guessCorrect = userGuess !== null && equity ? userGuess === equity.win : null;
 
   const isCoachAction = (btn)=>{
     if(!tip) return false;
@@ -799,10 +857,20 @@ export default function PokerGame(){
                   <span style={{fontSize:9,padding:"2px 6px",borderRadius:5,background:`${strengthColors[cat]}20`,color:strengthColors[cat],fontWeight:700,textTransform:"uppercase",letterSpacing:0.5}}>{strengthLabels[cat]}</span>
                   {heroEvalNow && <span style={{fontSize:11,color:"var(--history-text)"}}>{heroEvalNow.name}</span>}
                 </div>
-                {equity && (
+                {equity && !guessPending && (
                   <div>
-                    <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                    <div style={{display:"flex",alignItems:"baseline",gap:4,flexWrap:"wrap"}}>
                       <span style={{fontSize:28,fontWeight:800,fontFamily:"'Georgia',serif",color:winVal>60?"#4ecdc4":winVal>40?"#e6b34d":winVal>25?"#f59e0b":"#ef4444",lineHeight:1}}>{equity.win}%</span>
+                      {userGuess !== null && phase===0 && (
+                        <span style={{
+                          fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:8,
+                          background:guessCorrect?"rgba(78,205,196,0.15)":"rgba(239,68,68,0.15)",
+                          color:guessCorrect?"#4ecdc4":"#ef4444",
+                          border:`1px solid ${guessCorrect?"rgba(78,205,196,0.35)":"rgba(239,68,68,0.35)"}`,
+                        }}>
+                          {guessCorrect ? "✓ Correct" : `✗ You guessed ${userGuess}%`}
+                        </span>
+                      )}
                       {eqDelta!==null && eqDelta!==0 && (
                         <span style={{fontSize:11,fontWeight:700,color:eqDelta>0?"#4ecdc4":"#ef4444"}}>
                           {eqDelta>0?"▲":"▼"}{Math.abs(eqDelta).toFixed(1)}
@@ -823,17 +891,26 @@ export default function PokerGame(){
                     </div>
                   </div>
                 )}
+                {guessPending && (
+                  <div style={{fontSize:12,color:"var(--text-muted)",fontFamily:"'Georgia',serif",fontStyle:"italic",marginTop:4}}>
+                    Win % hidden — make your guess below
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {showExplain && equity && (
+          {guessPending && (
+            <EquityGuessPrompt options={guessOptions} numOpp={numOpp} onPick={submitEquityGuess}/>
+          )}
+
+          {showExplain && equity && !guessPending && (
             <ExplainBox heroCards={heroCards} community={visibleCommunity} equity={equity} phase={phase} numOpp={numOpp}/>
           )}
 
-          {tip && !result && <CoachBox tip={tip}/>}
+          {tip && !result && !guessPending && <CoachBox tip={tip}/>}
 
-          {!result && (
+          {!result && !guessPending && (
             <div style={{display:"flex",gap:6,justifyContent:"center",marginBottom:14}}>
               <button onClick={()=>advance("fold")} style={{
                 flex:1,padding:"13px 0",borderRadius:11,
